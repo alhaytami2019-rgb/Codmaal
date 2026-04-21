@@ -261,10 +261,13 @@ function findLectures(query) {
     }
     titleMatches.sort((a, b) => b.score - a.score);
 
-    const catMatches = LECTURES.filter(l => matchedCats.has(l.category));
     const seen = new Set(), results = [];
-    for (const l of titleMatches) { if (!seen.has(l.title)) { seen.add(l.title); results.push(l); } }
-    for (const l of catMatches) { if (!seen.has(l.title)) { seen.add(l.title); results.push(l); } }
+    if (titleMatches.length > 0) {
+        for (const l of titleMatches) { if (!seen.has(l.title)) { seen.add(l.title); results.push(l); } }
+    } else {
+        const catMatches = LECTURES.filter(l => matchedCats.has(l.category));
+        for (const l of catMatches) { if (!seen.has(l.title)) { seen.add(l.title); results.push(l); } }
+    }
     return { type: results.length ? "found" : "notfound", lectures: results };
 }
 
