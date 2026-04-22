@@ -70,7 +70,7 @@ body {
     flex-direction: column;
     flex: 1;
     overflow: hidden;
-    padding-bottom: var(--tab-bar-h);
+    padding-bottom: max(env(safe-area-inset-bottom), 8px);
 }
 
 .tab-view.active {
@@ -78,7 +78,7 @@ body {
 }
 
 .tab-view.has-mini-player {
-    padding-bottom: calc(var(--tab-bar-h) + var(--mini-player-h));
+    padding-bottom: var(--mini-player-h);
 }
 
 .tab-header {
@@ -874,7 +874,7 @@ body {
 /* ═══ MINI PLAYER DOCK ═══ */
 .mini-player {
     position: fixed;
-    bottom: var(--tab-bar-h);
+    bottom: 0;
     left: 50%;
     transform: translateX(-50%);
     width: 100%;

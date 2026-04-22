@@ -35,7 +35,6 @@ const CATEGORY_EMOJIS = {
 
 // ─── STATE ───
 let currentTab = 'lectures';
-let selectedArtist = 'All';
 let isShuffle = false;
 let isLoop = false;
 
@@ -55,16 +54,13 @@ function switchTab(tab) {
     if (tab !== 'favorites' && tab !== 'about') previousTab = currentTab;
     currentTab = tab;
     document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`view-${tab}`).classList.add('active');
-    const tabBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
-    if (tabBtn) tabBtn.classList.add('active');
     if (tab === 'favorites') renderFavorites();
     updateMiniPlayerPadding();
 }
 
 function goBack() {
-    switchTab(previousTab || 'nasheeds');
+    switchTab(previousTab || 'lectures');
 }
 
 function updateMiniPlayerPadding() {
@@ -72,134 +68,6 @@ function updateMiniPlayerPadding() {
     document.querySelectorAll('.tab-view').forEach(v => {
         v.classList.toggle('has-mini-player', !mp.classList.contains('hidden'));
     });
-}
-
-// ─── NASHEEDS TAB ───
-function getArtists() {
-    return ['All', ...new Set(NASHEEDS.map(t => t.artist))];
-}
-
-function renderArtistDropdown() {
-    const menu = document.getElementById('artist-menu');
-    menu.innerHTML = getArtists().map(a =>
-        `<div class="dropdown-item ${a === selectedArtist ? 'selected' : ''}" onclick="selectArtist('${a.replace(/'/g, "\\'")}')">${a === 'All' ? 'Dhammaan' : a}</div>`
-    ).join('');
-    document.getElementById('artist-text').textContent = selectedArtist === 'All' ? 'Dhammaan' : selectedArtist;
-}
-
-function toggleArtistDropdown(e) {
-    e.stopPropagation();
-    const menu = document.getElementById('artist-menu');
-    const trigger = document.getElementById('artist-trigger');
-    const isOpen = !menu.classList.contains('hidden');
-    if (isOpen) { menu.classList.add('hidden'); trigger.classList.remove('open'); }
-    else { menu.classList.remove('hidden'); trigger.classList.add('open'); }
-}
-
-function selectArtist(artist) {
-    selectedArtist = artist;
-    renderArtistDropdown();
-    renderNasheeds();
-    document.getElementById('artist-menu').classList.add('hidden');
-    document.getElementById('artist-trigger').classList.remove('open');
-}
-
-function getFilteredNasheeds() {
-    const list = selectedArtist === 'All' ? [...NASHEEDS] : NASHEEDS.filter(t => t.artist === selectedArtist);
-    return list.sort((a, b) => a.title.localeCompare(b.title));
-}
-
-function renderNasheeds() {
-    const list = getFilteredNasheeds();
-    const count = document.getElementById('nasheeds-count');
-    count.textContent = `${list.length} Nashiid`;
-
-    const container = document.getElementById('nasheeds-list');
-    container.innerHTML = list.map(track => {
-        const idx = NASHEEDS.indexOf(track);
-        const isPlaying = currentType === 'nasheed' && currentNasheedIdx === idx && !audioEl.paused;
-        return `
-        <div class="list-item" onclick="playNasheed(${idx})">
-            <img src="${track.cover}" class="list-img" loading="lazy" alt="">
-            <div class="list-info">
-                <div class="list-title">${track.title}</div>
-                <div class="list-meta">
-                    <span>${track.artist}</span>
-                    <span style="opacity:0.4">•</span>
-                    <span>${track.duration}</span>
-                    <button class="fav-btn ${track.isFavorite ? 'active' : ''}" onclick="event.stopPropagation(); toggleNasheedFav('${track.id}')" aria-label="favorite">
-                        <svg viewBox="0 0 24 24"><path d="${track.isFavorite ? 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z' : 'M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z'}"/></svg>
-                    </button>
-                </div>
-            </div>
-            <button class="list-play-btn" onclick="event.stopPropagation(); playNasheed(${idx})" aria-label="play">
-                <svg viewBox="0 0 24 24"><path d="${isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z'}"/></svg>
-            </button>
-        </div>`;
-    }).join('');
-}
-
-// ─── NASHEED PLAYBACK ───
-function playNasheed(idx) {
-    if (currentType === 'nasheed' && currentNasheedIdx === idx) {
-        if (audioEl.paused) audioEl.play(); else audioEl.pause();
-        updatePlayIcons();
-        renderNasheeds();
-        return;
-    }
-    currentType = 'nasheed';
-    currentNasheedIdx = idx;
-    const track = NASHEEDS[idx];
-
-    audioEl.src = track.src;
-    audioEl.load();
-    audioEl.playbackRate = speeds[currentSpeedIdx];
-    audioEl.play().catch(() => { });
-
-    // Update player UI
-    document.getElementById('fpTitle').textContent = track.title;
-    document.getElementById('fpCategory').textContent = track.artist;
-    document.getElementById('miniTitle').textContent = track.title;
-
-    // Cover art
-    const fpImg = document.getElementById('fpCoverImg');
-    const fpEmoji = document.getElementById('fpEmoji');
-    const mpCover = document.getElementById('miniCover');
-    const mpIcon = document.getElementById('miniIcon');
-    fpImg.src = track.cover;
-    fpImg.classList.remove('hidden');
-    fpEmoji.classList.add('hidden');
-    mpCover.src = track.cover;
-    mpCover.classList.remove('hidden');
-    mpIcon.classList.add('hidden');
-
-    showMiniPlayer();
-    updatePlayIcons();
-    updateFavBtn();
-    renderNasheeds();
-}
-
-function playNextNasheed() {
-    if (currentType !== 'nasheed') return;
-    const list = getFilteredNasheeds();
-    if (list.length === 0) return;
-    if (isShuffle) { currentNasheedIdx = NASHEEDS.indexOf(list[Math.floor(Math.random() * list.length)]); }
-    else {
-        const pos = list.findIndex(t => NASHEEDS.indexOf(t) === currentNasheedIdx);
-        const next = (pos + 1) % list.length;
-        currentNasheedIdx = NASHEEDS.indexOf(list[next]);
-    }
-    playNasheed(currentNasheedIdx);
-}
-
-function playPrevNasheed() {
-    if (currentType !== 'nasheed') return;
-    const list = getFilteredNasheeds();
-    if (list.length === 0) return;
-    const pos = list.findIndex(t => NASHEEDS.indexOf(t) === currentNasheedIdx);
-    const prev = (pos - 1 + list.length) % list.length;
-    currentNasheedIdx = NASHEEDS.indexOf(list[prev]);
-    playNasheed(currentNasheedIdx);
 }
 
 // ─── LECTURE PLAYBACK ───
@@ -364,30 +232,13 @@ function sendSuggestion(text) { userInput.value = text; sendMessage(text); }
 // ─── FAVORITES ───
 function loadFavorites() {
     try {
-        const nf = JSON.parse(localStorage.getItem('dhageyso_fav_nasheeds') || '[]');
-        NASHEEDS.forEach(t => t.isFavorite = nf.includes(t.id));
-    } catch (e) { }
-    try {
         const lf = JSON.parse(localStorage.getItem('dhageyso_fav_lectures') || '[]');
-        // Store as a Set for quick lookup
         window._favLectures = new Set(lf);
     } catch (e) { window._favLectures = new Set(); }
 }
 
 function saveFavorites() {
-    localStorage.setItem('dhageyso_fav_nasheeds', JSON.stringify(NASHEEDS.filter(t => t.isFavorite).map(t => t.id)));
     localStorage.setItem('dhageyso_fav_lectures', JSON.stringify([...window._favLectures]));
-}
-
-function toggleNasheedFav(id) {
-    const track = NASHEEDS.find(t => t.id === id);
-    if (track) {
-        track.isFavorite = !track.isFavorite;
-        saveFavorites();
-        renderNasheeds();
-        updateFavBtn();
-        showToast(track.isFavorite ? "❤️ Jeclaaday!" : "Jeclaan-kii la qaaday");
-    }
 }
 
 function toggleLectureFav(title) {
@@ -399,9 +250,7 @@ function toggleLectureFav(title) {
 }
 
 function toggleCurrentFavorite() {
-    if (currentType === 'nasheed' && currentNasheedIdx >= 0) {
-        toggleNasheedFav(NASHEEDS[currentNasheedIdx].id);
-    } else if (currentType === 'lecture' && currentLectureTitle) {
+    if (currentType === 'lecture' && currentLectureTitle) {
         toggleLectureFav(currentLectureTitle);
     }
 }
@@ -410,8 +259,7 @@ function updateFavBtn() {
     const btn = document.getElementById('fpFavBtn');
     const icon = document.getElementById('fpFavIcon');
     let isFav = false;
-    if (currentType === 'nasheed' && currentNasheedIdx >= 0) isFav = NASHEEDS[currentNasheedIdx].isFavorite;
-    else if (currentType === 'lecture') isFav = window._favLectures.has(currentLectureTitle);
+    if (currentType === 'lecture') isFav = window._favLectures.has(currentLectureTitle);
 
     btn.classList.toggle('active', isFav);
     icon.innerHTML = isFav
@@ -420,32 +268,11 @@ function updateFavBtn() {
 }
 
 function renderFavorites() {
-    const favNasheeds = NASHEEDS.filter(t => t.isFavorite);
     const favLectures = LECTURES.filter(l => window._favLectures.has(l.title));
-    const total = favNasheeds.length + favLectures.length;
+    const total = favLectures.length;
 
     document.getElementById('fav-count').textContent = `${total} Saved`;
     document.getElementById('fav-empty').classList.toggle('hidden', total > 0);
-
-    // Nasheeds section
-    const ns = document.getElementById('fav-nasheeds-section');
-    const nl = document.getElementById('fav-nasheeds-list');
-    if (favNasheeds.length > 0) {
-        ns.classList.remove('hidden');
-        nl.innerHTML = favNasheeds.map(track => {
-            const idx = NASHEEDS.indexOf(track);
-            return `<div class="list-item" onclick="playNasheed(${idx})">
-                <img src="${track.cover}" class="list-img" loading="lazy" alt="">
-                <div class="list-info">
-                    <div class="list-title">${track.title}</div>
-                    <div class="list-meta"><span>${track.artist}</span></div>
-                </div>
-                <button class="fav-btn active" onclick="event.stopPropagation(); toggleNasheedFav('${track.id}')">
-                    <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                </button>
-            </div>`;
-        }).join('');
-    } else { ns.classList.add('hidden'); }
 
     // Lectures section
     const ls = document.getElementById('fav-lectures-section');
@@ -481,7 +308,6 @@ function closePlayer() {
     document.getElementById('fullPlayer').classList.add('hidden');
     currentType = null; currentNasheedIdx = -1;
     updateMiniPlayerPadding();
-    renderNasheeds();
 }
 
 function openFullPlayer() { document.getElementById('fullPlayer').classList.remove('hidden'); }
@@ -516,14 +342,14 @@ function initPlayer() {
     // Full player controls
     document.getElementById('fpPlayPause').addEventListener('click', () => {
         if (audioEl.paused) audioEl.play(); else audioEl.pause();
-        updatePlayIcons(); renderNasheeds();
+        updatePlayIcons();
     });
     document.getElementById('fpRewind').addEventListener('click', () => { audioEl.currentTime = Math.max(0, audioEl.currentTime - 10); });
     document.getElementById('fpForward').addEventListener('click', () => { audioEl.currentTime = Math.min(audioEl.duration || 0, audioEl.currentTime + 10); });
     document.getElementById('fpMinimize').addEventListener('click', minimizePlayer);
     document.getElementById('fpSpeed').addEventListener('click', cycleSpeed);
-    document.getElementById('fpPrev').addEventListener('click', () => { if (currentType === 'nasheed') playPrevNasheed(); });
-    document.getElementById('fpNext').addEventListener('click', () => { if (currentType === 'nasheed') playNextNasheed(); });
+    document.getElementById('fpPrev').addEventListener('click', () => { });
+    document.getElementById('fpNext').addEventListener('click', () => { });
     document.getElementById('fpShuffle').addEventListener('click', () => {
         isShuffle = !isShuffle;
         document.getElementById('fpShuffle').classList.toggle('active', isShuffle);
@@ -539,14 +365,14 @@ function initPlayer() {
     document.getElementById('miniPlayPause').addEventListener('click', (e) => {
         e.stopPropagation();
         if (audioEl.paused) audioEl.play(); else audioEl.pause();
-        updatePlayIcons(); renderNasheeds();
+        updatePlayIcons();
     });
     document.getElementById('miniClose').addEventListener('click', (e) => { e.stopPropagation(); closePlayer(); });
     document.getElementById('miniRewind').addEventListener('click', () => { audioEl.currentTime = Math.max(0, audioEl.currentTime - 10); });
     document.getElementById('miniForward').addEventListener('click', () => { audioEl.currentTime = Math.min(audioEl.duration || 0, audioEl.currentTime + 10); });
     document.getElementById('miniSpeed').addEventListener('click', cycleSpeed);
-    document.getElementById('miniPrev').addEventListener('click', () => { if (currentType === 'nasheed') playPrevNasheed(); });
-    document.getElementById('miniNext').addEventListener('click', () => { if (currentType === 'nasheed') playNextNasheed(); });
+    document.getElementById('miniPrev').addEventListener('click', () => { });
+    document.getElementById('miniNext').addEventListener('click', () => { });
 
     // Seek bars
     const fpSeek = document.getElementById('fpSeek');
@@ -569,17 +395,11 @@ function initPlayer() {
         const d = formatTime(audioEl.duration);
         document.getElementById('fpDuration').textContent = d;
         document.getElementById('miniDuration').textContent = d;
-        // Update nasheed duration if applicable
-        if (currentType === 'nasheed' && currentNasheedIdx >= 0) {
-            NASHEEDS[currentNasheedIdx].duration = d;
-            renderNasheeds();
-        }
     });
-    audioEl.addEventListener('play', () => { updatePlayIcons(); renderNasheeds(); });
-    audioEl.addEventListener('pause', () => { updatePlayIcons(); renderNasheeds(); });
+    audioEl.addEventListener('play', () => { updatePlayIcons(); });
+    audioEl.addEventListener('pause', () => { updatePlayIcons(); });
     audioEl.addEventListener('ended', () => {
         if (isLoop) { audioEl.currentTime = 0; audioEl.play(); }
-        else if (currentType === 'nasheed') playNextNasheed();
         updatePlayIcons();
     });
 }
@@ -602,19 +422,11 @@ function shareApp() {
 // ─── INIT ───
 function init() {
     loadFavorites();
-    renderArtistDropdown();
-    renderNasheeds();
     initPlayer();
 
     // Chat form
     userInput.addEventListener('input', () => { sendBtn.disabled = !userInput.value.trim(); });
     chatForm.addEventListener('submit', (e) => { e.preventDefault(); const t = userInput.value.trim(); if (t) sendMessage(t); });
-
-    // Close dropdown on outside click
-    window.addEventListener('click', () => {
-        document.getElementById('artist-menu').classList.add('hidden');
-        document.getElementById('artist-trigger').classList.remove('open');
-    });
 }
 
 init();
